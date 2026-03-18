@@ -34,9 +34,13 @@ class WhatsAppWebhookController(
     @PostMapping
     fun receive(
         @RequestBody payload: WhatsAppWebhookPayload,
-        @RequestHeader("X-Tenant-Id") tenantId: String
+        @RequestHeader("X-Tenant-Id", required = false) tenantId: String?
     ): ResponseEntity<Unit> {
-        val tid = TenantId.from(tenantId)
+        // Resolve tenant: prefer explicit header, fall back to phone_number_id from payload metadata
+        val resolvedTenantId = tenantId
+            ?: payload.entry.firstOrNull()?.changes?.firstOrNull()?.value?.metadata?.phoneNumberId
+            ?: return ResponseEntity.badRequest().build()
+        val tid = TenantId.from(resolvedTenantId)
 
         payload.entry.forEach { entry ->
             entry.changes.forEach { change ->
