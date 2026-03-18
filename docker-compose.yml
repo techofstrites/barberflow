@@ -71,7 +71,7 @@ services:
       CONFIG_FILEPATH: /tmp/config.yml
       CONFIG_FILE_ENV_SUBST: "true"
     entrypoint: /bin/sh
-    command: -c 'echo "kafka:\n  brokers:\n    - redpanda:9092" > /tmp/config.yml && /app/console'
+    command: -c 'printf "kafka:\n  brokers:\n    - redpanda:9092\n" > /tmp/config.yml && /app/console'
 
   api:
     build:
