@@ -1,0 +1,31 @@
+# Gradle cache e builds locais
+.gradle/
+build/
+*/build/
+**/.gradle/
+**/build/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Git
+.git/
+.gitignore
+
+# Docs
+*.md
+docs/
+
+# Secrets locais
+.env
+.env.local

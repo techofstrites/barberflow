@@ -1,0 +1,235 @@
+### BarberFlow API — IntelliJ HTTP Client
+### Variáveis: defina em http-client.env.json ou substitua manualmente
+
+# @no-redirect
+
+### ============================================================
+### VARIÁVEIS (edite aqui ou crie http-client.env.json)
+### ============================================================
+# baseUrl  = http://localhost:8080
+# token    = <accessToken retornado no login>
+# tenantId = <UUID do tenant>
+
+
+### ============================================================
+### TENANT & AUTH
+### ============================================================
+
+### 1. Criar tenant (cria admin automaticamente)
+POST http://localhost:8080/api/v1/tenants
+Content-Type: application/json
+
+{
+  "slug": "barbearia-silva",
+  "name": "Barbearia Silva",
+  "adminEmail": "admin@silva.com",
+  "adminPassword": "senha1234"
+}
+
+### ============================================================
+
+### 2. Login
+# > {%
+#   client.global.set("token", response.body.accessToken);
+#   client.global.set("tenantId", response.body.tenantId);
+# %}
+POST http://localhost:8080/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@silva.com",
+  "password": "senha1234"
+}
+
+### ============================================================
+### CLIENTES
+### ============================================================
+
+### 3. Criar cliente
+POST http://localhost:8080/api/v1/customers
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+
+{
+  "phone": "+5511999990001",
+  "name": "João da Silva",
+  "consentGiven": true
+}
+
+### ============================================================
+
+### 4. Listar clientes
+GET http://localhost:8080/api/v1/customers
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+
+### ============================================================
+
+### 5. Buscar cliente por telefone
+GET http://localhost:8080/api/v1/customers/by-phone?phone=%2B5511999990001
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+
+### ============================================================
+### PROFISSIONAIS
+### ============================================================
+
+### 6. Criar profissional
+POST http://localhost:8080/api/v1/professionals
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+
+{
+  "name": "Carlos Barbeiro",
+  "specialties": ["Corte", "Barba", "Coloração"]
+}
+
+### ============================================================
+
+### 7. Listar profissionais
+GET http://localhost:8080/api/v1/professionals
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+
+### ============================================================
+### SERVIÇOS
+### ============================================================
+
+### 8. Criar serviço
+POST http://localhost:8080/api/v1/services
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+
+{
+  "name": "Corte masculino",
+  "price": 35.00,
+  "durationMinutes": 30
+}
+
+### ============================================================
+
+### 9. Criar serviço — Barba
+POST http://localhost:8080/api/v1/services
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+
+{
+  "name": "Barba",
+  "price": 25.00,
+  "durationMinutes": 20
+}
+
+### ============================================================
+
+### 10. Listar serviços
+GET http://localhost:8080/api/v1/services
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+
+### ============================================================
+### AGENDAMENTOS
+### ============================================================
+
+### 11. Criar agendamento
+# Substitua customerId, professionalId e serviceIds pelos IDs reais
+POST http://localhost:8080/api/v1/appointments
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+
+{
+  "customerId": "00000000-0000-0000-0000-000000000001",
+  "professionalId": "00000000-0000-0000-0000-000000000002",
+  "serviceIds": ["00000000-0000-0000-0000-000000000003"],
+  "startAt": "2026-03-20T10:00:00-03:00"
+}
+
+### ============================================================
+
+### 12. Listar agendamentos por intervalo de data
+GET http://localhost:8080/api/v1/appointments?from=2026-03-20T00:00:00Z&to=2026-03-20T23:59:59Z
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+
+### ============================================================
+
+### 13. Completar agendamento
+POST http://localhost:8080/api/v1/appointments/{{appointmentId}}/complete
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+
+### ============================================================
+
+### 14. Cancelar agendamento
+DELETE http://localhost:8080/api/v1/appointments/{{appointmentId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+
+{
+  "reason": "Cliente solicitou cancelamento"
+}
+
+### ============================================================
+### BILLING
+### ============================================================
+
+### 15. Iniciar trial
+POST http://localhost:8080/api/v1/billing/trial
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+
+### ============================================================
+
+### 16. Consultar assinatura
+GET http://localhost:8080/api/v1/billing/subscription
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+
+### ============================================================
+
+### 17. Ativar plano pago
+POST http://localhost:8080/api/v1/billing/activate
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Tenant-Id: {{tenantId}}
+
+{
+  "planTier": "GROWTH",
+  "externalPaymentId": "pay_abc123"
+}
+
+### ============================================================
+### CHATBOT (WhatsApp Webhook)
+### ============================================================
+
+### 18. Webhook WhatsApp — simular mensagem recebida
+POST http://localhost:8080/api/v1/webhooks/whatsapp
+Content-Type: application/json
+
+{
+  "object": "whatsapp_business_account",
+  "entry": [{
+    "changes": [{
+      "value": {
+        "messages": [{
+          "from": "5511999990001",
+          "type": "text",
+          "text": { "body": "Oi, quero agendar" }
+        }],
+        "metadata": { "phone_number_id": "{{tenantId}}" }
+      }
+    }]
+  }]
+}
+
+### ============================================================
+### HEALTH CHECK
+### ============================================================
+
+### 19. Health check
+GET http://localhost:8080/actuator/health

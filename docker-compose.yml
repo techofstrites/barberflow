@@ -1,0 +1,125 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: barberflow-postgres
+    environment:
+      POSTGRES_DB: barberflow
+      POSTGRES_USER: barberflow
+      POSTGRES_PASSWORD: barberflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U barberflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: barberflow-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redpanda:
+    image: redpandadata/redpanda:latest
+    container_name: barberflow-kafka
+    command:
+      - redpanda
+      - start
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
+      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr internal://redpanda:8082,external://localhost:18082
+      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
+      - --rpc-addr redpanda:33145
+      - --advertise-rpc-addr redpanda:33145
+      - --mode dev-container
+      - --smp 1
+      - --default-log-level=warn
+    ports:
+      - "19092:19092"
+      - "18082:18082"
+      - "18081:18081"
+    volumes:
+      - redpanda_data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  redpanda-console:
+    image: redpandadata/console:latest
+    container_name: barberflow-redpanda-console
+    depends_on:
+      - redpanda
+    ports:
+      - "8090:8080"
+    environment:
+      CONFIG_FILEPATH: /tmp/config.yml
+      CONFIG_FILE_ENV_SUBST: "true"
+    entrypoint: /bin/sh
+    command: -c 'echo "kafka:\n  brokers:\n    - redpanda:9092" > /tmp/config.yml && /app/console'
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: barberflow-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/barberflow
+      DATABASE_USER: barberflow
+      DATABASE_PASSWORD: barberflow
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+      REDIS_URL: redis://redis:6379
+      SPRING_DATA_REDIS_URL: redis://redis:6379
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SPRING_FLYWAY_LOCATIONS: classpath:db/migration/system
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: barberflow-frontend
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+
+volumes:
+  postgres_data:
+  redis_data:
+  redpanda_data:
