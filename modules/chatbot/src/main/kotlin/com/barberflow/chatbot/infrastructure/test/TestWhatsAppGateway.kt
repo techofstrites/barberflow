@@ -1,6 +1,7 @@
 package com.barberflow.chatbot.infrastructure.test
 
 import com.barberflow.chatbot.domain.port.*
+import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
@@ -10,6 +11,14 @@ import org.springframework.stereotype.Component
 class TestWhatsAppGateway(private val store: TestMessageStore) : WhatsAppGateway {
 
     private val log = LoggerFactory.getLogger(javaClass)
+
+    @PostConstruct
+    fun init() {
+        log.warn("=======================================================")
+        log.warn("  WHATSAPP TEST MODE ACTIVE — real Meta API is DISABLED")
+        log.warn("  Messages available at: GET /api/v1/whatsapp-test/messages")
+        log.warn("=======================================================")
+    }
 
     override fun sendText(message: WhatsAppTextMessage) {
         log.debug("[TEST] Text to {}: {}", message.to, message.body)

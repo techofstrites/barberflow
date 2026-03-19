@@ -223,7 +223,7 @@ export default function TestChatPage() {
   useEffect(() => {
     if (!phoneNumber) return;
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-    pollIntervalRef.current = setInterval(pollMessages, 1500);
+    pollIntervalRef.current = setInterval(pollMessages, 3000);
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
