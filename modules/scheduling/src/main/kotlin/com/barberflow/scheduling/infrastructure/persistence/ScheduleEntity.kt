@@ -20,7 +20,7 @@ class ScheduleEntity(
     @Column(name = "professional_id", nullable = false)
     val professionalId: UUID,
 
-    @OneToMany(mappedBy = "schedule", cascade = [CascadeType.ALL], fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "schedule", cascade = [CascadeType.ALL], fetch = FetchType.EAGER, orphanRemoval = true)
     val workingHours: MutableList<WorkingHoursEntity> = mutableListOf()
 ) {
     fun toDomain() = Schedule(

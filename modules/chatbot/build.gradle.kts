@@ -13,6 +13,9 @@ dependencyManagement {
 
 dependencies {
     implementation(project(":core"))
+    implementation(project(":modules:iam"))
+    implementation(project(":modules:scheduling"))
+    implementation(project(":modules:customer"))
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")

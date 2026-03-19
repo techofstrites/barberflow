@@ -1,6 +1,8 @@
 spring:
   jpa:
     show-sql: true
+  kafka:
+    bootstrap-servers: localhost:19092
 
 logging:
   level:

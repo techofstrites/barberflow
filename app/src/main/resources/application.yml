@@ -23,8 +23,9 @@ spring:
     schemas: public
     baseline-on-migrate: true
 
-  redis:
-    url: ${REDIS_URL:redis://localhost:6379}
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
@@ -63,11 +64,15 @@ jwt:
 
 whatsapp:
   api:
-    base-url: ${WHATSAPP_API_BASE_URL:https://graph.facebook.com/v19.0}
+    base-url: ${WHATSAPP_API_BASE_URL:https://graph.facebook.com/v22.0}
     token: ${WHATSAPP_API_TOKEN:}
     phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
   webhook:
     verify-token: ${WHATSAPP_WEBHOOK_VERIFY_TOKEN:barberflow_verify}
+
+anthropic:
+  api:
+    key: ${ANTHROPIC_API_KEY:}
 
 logging:
   level:

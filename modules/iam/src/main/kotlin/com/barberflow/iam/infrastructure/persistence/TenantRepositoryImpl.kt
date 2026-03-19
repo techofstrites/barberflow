@@ -21,6 +21,9 @@ class TenantRepositoryImpl(
     override fun findBySlug(slug: String): Tenant? =
         jpa.findBySlug(slug)?.toDomain()
 
+    override fun findByWhatsAppPhoneNumberId(phoneNumberId: String): Tenant? =
+        jpa.findByWhatsappPhoneNumberId(phoneNumberId)?.toDomain()
+
     override fun existsBySlug(slug: String): Boolean =
         jpa.existsBySlug(slug)
 }

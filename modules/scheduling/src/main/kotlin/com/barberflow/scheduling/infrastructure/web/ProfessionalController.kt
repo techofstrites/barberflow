@@ -31,6 +31,11 @@ data class CreateProfessionalRequest(
     val specialties: List<String> = emptyList()
 )
 
+data class UpdateProfessionalRequest(
+    @field:NotBlank val name: String,
+    val specialties: List<String> = emptyList()
+)
+
 data class ProfessionalResponse(
     val id: UUID,
     val name: String,
@@ -61,5 +66,25 @@ class ProfessionalController(private val jpa: ProfessionalJpaRepository) {
             )
         )
         return ProfessionalResponse(entity.id, entity.name, entity.specialties.toList(), entity.active)
+    }
+
+    @PutMapping("/{id}")
+    fun update(
+        @PathVariable id: UUID,
+        @Valid @RequestBody req: UpdateProfessionalRequest,
+        @RequestHeader("X-Tenant-Id") tenantId: String
+    ): ProfessionalResponse {
+        val existing = jpa.findById(id).orElseThrow { NoSuchElementException("Professional not found") }
+        val updated = jpa.save(
+            ProfessionalEntity(
+                id = existing.id,
+                tenantId = existing.tenantId,
+                name = req.name,
+                specialties = req.specialties.toTypedArray(),
+                active = existing.active,
+                createdAt = existing.createdAt
+            )
+        )
+        return ProfessionalResponse(updated.id, updated.name, updated.specialties.toList(), updated.active)
     }
 }

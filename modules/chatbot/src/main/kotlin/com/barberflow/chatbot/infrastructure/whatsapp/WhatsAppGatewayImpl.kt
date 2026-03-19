@@ -55,7 +55,8 @@ class WhatsAppGatewayImpl(
 
     override fun sendList(message: WhatsAppListMessage) {
         if (accessToken.isBlank()) {
-            log.info("[WhatsApp STUB] List to {}: {}", message.to, message.body)
+            val items = message.sections.flatMap { it.rows }.joinToString(" | ") { "[${it.id}] ${it.title}" }
+            log.info("[WhatsApp STUB] List to {}: {} | Items: {}", message.to, message.body, items)
             return
         }
         val body = mapOf(
