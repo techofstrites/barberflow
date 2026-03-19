@@ -1,8 +1,14 @@
 spring:
   jpa:
     show-sql: true
+  kafka:
+    bootstrap-servers: localhost:19092
+
+jwt:
+  expiration-ms: 86400000        # 24h em dev (produção usa 15min do application.yml)
+  refresh-expiration-ms: 604800000
 
 logging:
   level:
     com.barberflow: DEBUG
-    org.springframework.web: DEBUG
+    org.springframework.web: WARN

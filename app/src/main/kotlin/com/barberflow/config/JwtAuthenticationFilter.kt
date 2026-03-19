@@ -39,7 +39,7 @@ class JwtAuthenticationFilter(
             )
             SecurityContextHolder.getContext().authentication = auth
         } catch (e: Exception) {
-            logger.debug("JWT validation failed: ${e.message}")
+            logger.trace("JWT validation failed: ${e.message}")
         }
 
         filterChain.doFilter(request, response)

@@ -29,4 +29,16 @@ class ServiceCatalogRepositoryImpl(
         )
         return service
     }
+
+    override fun deactivate(tenantId: TenantId, serviceId: UUID) {
+        val entity = jpa.findByIdAndTenantId(serviceId, tenantId.value) ?: return
+        jpa.save(ServiceCatalogEntity(
+            id = entity.id,
+            tenantId = entity.tenantId,
+            name = entity.name,
+            price = entity.price,
+            durationMinutes = entity.durationMinutes,
+            active = false
+        ))
+    }
 }

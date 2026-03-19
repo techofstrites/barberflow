@@ -4,10 +4,12 @@ import com.barberflow.chatbot.domain.port.*
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 
 @Component
+@ConditionalOnProperty(name = ["whatsapp.test-mode"], havingValue = "false", matchIfMissing = true)
 class WhatsAppGatewayImpl(
     @Value("\${whatsapp.api.base-url:https://graph.facebook.com/v19.0}") private val baseUrl: String,
     @Value("\${whatsapp.api.token:}") private val accessToken: String,
@@ -55,7 +57,8 @@ class WhatsAppGatewayImpl(
 
     override fun sendList(message: WhatsAppListMessage) {
         if (accessToken.isBlank()) {
-            log.info("[WhatsApp STUB] List to {}: {}", message.to, message.body)
+            val items = message.sections.flatMap { it.rows }.joinToString(" | ") { "[${it.id}] ${it.title}" }
+            log.info("[WhatsApp STUB] List to {}: {} | Items: {}", message.to, message.body, items)
             return
         }
         val body = mapOf(

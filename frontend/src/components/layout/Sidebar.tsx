@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, Users, Scissors, UserCheck, LogOut, Zap } from "lucide-react";
+import { Calendar, Users, Scissors, UserCheck, LogOut, Zap, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clearAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ const navItems = [
   { href: "/customers", label: "Clientes", icon: Users },
   { href: "/professionals", label: "Profissionais", icon: UserCheck },
   { href: "/services", label: "Serviços", icon: Scissors },
+  { href: "/test-chat", label: "Simulador WhatsApp", icon: MessageSquare },
 ];
 
 export function Sidebar() {

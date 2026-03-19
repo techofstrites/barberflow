@@ -15,6 +15,7 @@ sealed class Intent {
     // Selections
     data class SelectService(val serviceId: String) : Intent()
     data class SelectProfessional(val professionalId: String) : Intent()
+    data class SelectDay(val dateStr: String) : Intent()
     data class SelectSlot(val slotId: String) : Intent()
 
     // Fallback

@@ -10,4 +10,5 @@ interface CustomerRepository {
     fun findByPhone(phone: String, tenantId: TenantId): Customer?
     fun existsByPhone(phone: String, tenantId: TenantId): Boolean
     fun findAll(tenantId: TenantId): List<Customer>
+    fun delete(id: UUID, tenantId: TenantId)
 }

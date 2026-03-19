@@ -14,6 +14,11 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
 import java.util.UUID
 
+data class UpdateCustomerRequest(
+    @field:NotBlank val name: String,
+    val consentGiven: Boolean = false
+)
+
 data class CreateCustomerRequest(
     @field:NotBlank
     @field:Pattern(regexp = "\\+[1-9]\\d{7,14}", message = "Phone must be in E.164 format")
@@ -57,6 +62,33 @@ class CustomerController(
             )
         )
         return mapOf("customerId" to id)
+    }
+
+    @PutMapping("/{id}")
+    fun update(
+        @PathVariable id: UUID,
+        @Valid @RequestBody request: UpdateCustomerRequest,
+        @RequestHeader("X-Tenant-Id") tenantId: String
+    ): CustomerResponse {
+        val tid = TenantId.from(tenantId)
+        val customer = customerRepository.findById(id, tid)
+            ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found")
+        customer.name = request.name
+        if (request.consentGiven) customer.giveConsent()
+        customerRepository.save(customer)
+        return CustomerResponse(id = customer.id, phone = customer.phone, name = customer.name, consentGiven = customer.consentGiven)
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun delete(
+        @PathVariable id: UUID,
+        @RequestHeader("X-Tenant-Id") tenantId: String
+    ) {
+        val tid = TenantId.from(tenantId)
+        customerRepository.findById(id, tid)
+            ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found")
+        customerRepository.delete(id, tid)
     }
 
     @GetMapping("/by-phone")

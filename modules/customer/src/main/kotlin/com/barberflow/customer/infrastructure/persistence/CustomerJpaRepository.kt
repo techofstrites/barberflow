@@ -8,4 +8,5 @@ interface CustomerJpaRepository : JpaRepository<CustomerEntity, UUID> {
     fun findByIdAndTenantId(id: UUID, tenantId: UUID): CustomerEntity?
     fun existsByPhoneAndTenantId(phone: String, tenantId: UUID): Boolean
     fun findAllByTenantId(tenantId: UUID): List<CustomerEntity>
+    fun deleteByIdAndTenantId(id: UUID, tenantId: UUID)
 }

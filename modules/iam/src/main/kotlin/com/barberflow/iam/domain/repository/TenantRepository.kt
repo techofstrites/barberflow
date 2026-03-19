@@ -7,5 +7,6 @@ interface TenantRepository {
     fun save(tenant: Tenant): Tenant
     fun findById(id: TenantId): Tenant?
     fun findBySlug(slug: String): Tenant?
+    fun findByWhatsAppPhoneNumberId(phoneNumberId: String): Tenant?
     fun existsBySlug(slug: String): Boolean
 }

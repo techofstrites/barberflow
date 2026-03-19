@@ -10,6 +10,17 @@ export interface Appointment {
   suggestedByAI: boolean;
 }
 
+export interface AppointmentDetail {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  professionalName: string;
+  startAt: string;
+  endAt: string;
+  status: string;
+  services: string[];
+}
+
 export interface ServiceItem {
   serviceId: string;
   name: string;
@@ -29,6 +40,19 @@ export interface Professional {
   name: string;
   specialties: string[];
   active: boolean;
+}
+
+export type DayOfWeek = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
+
+export interface WorkingHours {
+  dayOfWeek: DayOfWeek;
+  startTime: string; // "HH:mm"
+  endTime: string;   // "HH:mm"
+}
+
+export interface Schedule {
+  professionalId: string;
+  workingHours: WorkingHours[];
 }
 
 export interface Service {
