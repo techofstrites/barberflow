@@ -49,12 +49,21 @@ class AppointmentBookingAdapter(
         require(conflicts.isEmpty()) { "Time slot is no longer available" }
 
         log.debug("Booking step 4: create appointment")
-        val pendingService = ServiceItem(
-            serviceId = UUID.nameUUIDFromBytes("chatbot-pending".toByteArray()),
-            name = "A confirmar",
-            price = BigDecimal.ZERO,
-            durationMinutes = request.durationMinutes
-        )
+        val pendingService = if (request.serviceId != null && request.serviceName != null) {
+            ServiceItem(
+                serviceId = request.serviceId,
+                name = request.serviceName,
+                price = request.servicePrice ?: BigDecimal.ZERO,
+                durationMinutes = request.durationMinutes
+            )
+        } else {
+            ServiceItem(
+                serviceId = UUID.nameUUIDFromBytes("chatbot-pending".toByteArray()),
+                name = "A confirmar",
+                price = BigDecimal.ZERO,
+                durationMinutes = request.durationMinutes
+            )
+        }
 
         val appointment = Appointment.schedule(
             tenantId = request.tenantId,

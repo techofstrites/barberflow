@@ -10,6 +10,17 @@ export interface Appointment {
   suggestedByAI: boolean;
 }
 
+export interface AppointmentDetail {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  professionalName: string;
+  startAt: string;
+  endAt: string;
+  status: string;
+  services: string[];
+}
+
 export interface ServiceItem {
   serviceId: string;
   name: string;

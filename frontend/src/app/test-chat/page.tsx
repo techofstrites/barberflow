@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Send, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { Send, ChevronDown, ChevronUp, Trash2, CheckCircle, AlertCircle } from "lucide-react";
 import { api } from "@/lib/api";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -35,7 +35,8 @@ function buildWebhookPayload(
   fromPhone: string,
   phoneNumberId: string,
   text: string,
-  interactiveId?: string
+  interactiveId?: string,
+  contactName?: string
 ) {
   const message = interactiveId
     ? {
@@ -56,6 +57,10 @@ function buildWebhookPayload(
         text: { body: text },
       };
 
+  const contacts = contactName?.trim()
+    ? [{ wa_id: fromPhone, profile: { name: contactName.trim() } }]
+    : [];
+
   return {
     object: "whatsapp_business_account",
     entry: [
@@ -66,6 +71,7 @@ function buildWebhookPayload(
             field: "messages",
             value: {
               messages: [message],
+              contacts,
               metadata: {
                 display_phone_number: "5500000000000",
                 phone_number_id: phoneNumberId,
@@ -187,12 +193,15 @@ const DEFAULT_PHONE_NUMBER_ID = "982029531668676";
 export default function TestChatPage() {
   const [phoneNumber, setPhoneNumber] = useState("5551999999999");
   const [phoneNumberId, setPhoneNumberId] = useState(DEFAULT_PHONE_NUMBER_ID);
+  const [contactName, setContactName] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [sending, setSending] = useState(false);
   const [polling, setPolling] = useState(false);
+  const [customerStatus, setCustomerStatus] = useState<"unknown" | "found" | "not-found">("unknown");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const customerCheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const addMessage = useCallback((direction: "outbound" | "inbound", content: BotMessage | { type: "text"; body: string }) => {
     setMessages((prev) => [
@@ -229,13 +238,32 @@ export default function TestChatPage() {
     };
   }, [phoneNumber, pollMessages]);
 
+  // Check customer registration on phone change (debounced)
+  useEffect(() => {
+    if (customerCheckTimerRef.current) clearTimeout(customerCheckTimerRef.current);
+    setCustomerStatus("unknown");
+    if (!phoneNumber) return;
+    customerCheckTimerRef.current = setTimeout(async () => {
+      try {
+        const normalizedPhone = phoneNumber.startsWith("+") ? phoneNumber : "+" + phoneNumber;
+        await api.get("/api/v1/customers/by-phone", { params: { phone: normalizedPhone } });
+        setCustomerStatus("found");
+      } catch {
+        setCustomerStatus("not-found");
+      }
+    }, 500);
+    return () => {
+      if (customerCheckTimerRef.current) clearTimeout(customerCheckTimerRef.current);
+    };
+  }, [phoneNumber]);
+
   // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   async function sendToWebhook(text: string, interactiveId?: string) {
-    const payload = buildWebhookPayload(phoneNumber, phoneNumberId, text, interactiveId);
+    const payload = buildWebhookPayload(phoneNumber, phoneNumberId, text, interactiveId, contactName);
     await api.post("/api/v1/webhooks/whatsapp", payload);
   }
 
@@ -299,14 +327,38 @@ export default function TestChatPage() {
         <Card>
           <CardContent className="p-4">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Número do cliente (simular)</Label>
+              <div className="space-y-1 col-span-2 sm:col-span-1">
+                <Label className="text-xs">Nome do cliente (perfil WhatsApp)</Label>
                 <Input
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="5551999999999"
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                  placeholder="Ex: João Silva (deixe vazio para usar o número)"
                   className="h-8 text-sm"
                 />
+              </div>
+              <div className="col-span-2 sm:col-span-1" />
+              <div className="space-y-1">
+                <Label className="text-xs">Número do cliente (simular)</Label>
+                <div className="relative">
+                  <Input
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="5551999999999"
+                    className="h-8 text-sm pr-8"
+                  />
+                  {customerStatus === "found" && (
+                    <CheckCircle className="absolute right-2 top-1.5 h-4 w-4 text-green-500" />
+                  )}
+                  {customerStatus === "not-found" && (
+                    <AlertCircle className="absolute right-2 top-1.5 h-4 w-4 text-orange-400" />
+                  )}
+                </div>
+                {customerStatus === "found" && (
+                  <p className="text-xs text-green-600">Cliente cadastrado</p>
+                )}
+                {customerStatus === "not-found" && (
+                  <p className="text-xs text-orange-500">Cliente não cadastrado (será criado ao enviar mensagem)</p>
+                )}
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">WhatsApp Phone Number ID</Label>

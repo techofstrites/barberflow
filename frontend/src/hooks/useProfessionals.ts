@@ -46,7 +46,7 @@ export function useUpsertSchedule() {
   return useMutation({
     mutationFn: ({ professionalId, workingHours }: { professionalId: string; workingHours: WorkingHours[] }) =>
       api.put<Schedule>(`/api/v1/professionals/${professionalId}/schedule`, { workingHours }),
-    onSuccess: (_, { professionalId }) =>
-      qc.invalidateQueries({ queryKey: ["schedule", professionalId] }),
+    onSuccess: (response, { professionalId }) =>
+      qc.setQueryData(["schedule", professionalId], response.data),
   });
 }
