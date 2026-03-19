@@ -63,6 +63,7 @@ jwt:
   refresh-expiration-ms: 604800000  # 7 days
 
 whatsapp:
+  test-mode: ${WHATSAPP_TEST_MODE:false}
   api:
     base-url: ${WHATSAPP_API_BASE_URL:https://graph.facebook.com/v22.0}
     token: ${WHATSAPP_API_TOKEN:}
