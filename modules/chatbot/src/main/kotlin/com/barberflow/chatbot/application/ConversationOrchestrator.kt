@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -38,6 +39,8 @@ class ConversationOrchestrator(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val ptBr = Locale.forLanguageTag("pt-BR")
+    private val dayFormatter = DateTimeFormatter.ofPattern("EEE, dd/MM", ptBr)
+    private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm", ptBr)
     private val slotFormatter = DateTimeFormatter.ofPattern("EEE, dd/MM 'às' HH:mm", ptBr)
     private val summaryFormatter = DateTimeFormatter.ofPattern("EEEE, dd 'de' MMMM 'às' HH:mm", ptBr)
 
@@ -57,6 +60,7 @@ class ConversationOrchestrator(
             is Intent.Greeting -> handleGreeting(conversation)
             is Intent.ScheduleAppointment -> handleScheduleRequest(tenantId, conversation)
             is Intent.SelectProfessional -> handleProfessionalSelected(tenantId, conversation, intent.professionalId)
+            is Intent.SelectDay -> handleDaySelected(tenantId, conversation, intent.dateStr)
             is Intent.SelectSlot -> handleSlotSelected(conversation, intent.slotId)
             is Intent.Confirm -> handleConfirmation(tenantId, conversation)
             is Intent.Decline -> sendMainMenu(conversation, "Tudo bem! Se precisar de algo, é só chamar. 👊")
@@ -107,7 +111,7 @@ class ConversationOrchestrator(
         )
     }
 
-    // ── Professional selected: show available slots ───────────────────────────
+    // ── Professional selected: show available days ────────────────────────────
     private fun handleProfessionalSelected(tenantId: TenantId, conversation: Conversation, professionalId: String) {
         val pid = runCatching { UUID.fromString(professionalId) }.getOrNull()
             ?: return handleUnrecognized(tenantId, conversation)
@@ -115,13 +119,13 @@ class ConversationOrchestrator(
         val professional = professionalQueryPort.findById(tenantId, pid)
             ?: return handleUnrecognized(tenantId, conversation)
 
-        val slots = availableSlotQueryPort.findNextSlots(tenantId, pid, daysAhead = 7, limit = 3)
+        val days = availableSlotQueryPort.findAvailableDays(tenantId, pid, daysAhead = 14)
 
-        if (slots.isEmpty()) {
+        if (days.isEmpty()) {
             whatsAppGateway.sendButtons(
                 WhatsAppButtonMessage(
                     to = conversation.customerPhone,
-                    body = "Não encontrei horários disponíveis para ${professional.name} nos próximos 7 dias. Deseja escolher outro profissional?",
+                    body = "Não encontrei dias disponíveis para ${professional.name} nos próximos 14 dias. Deseja escolher outro profissional?",
                     buttons = listOf(
                         ButtonOption("schedule", "Escolher outro"),
                         ButtonOption("decline:", "Voltar ao menu")
@@ -132,22 +136,94 @@ class ConversationOrchestrator(
         }
 
         conversation.updateContext { it.copy(selectedProfessionalId = pid, selectedProfessionalName = professional.name) }
+        conversation.transitionTo(ConversationState.DAY_SELECTION)
+        conversation.resetUnrecognized()
+
+        val today = LocalDate.now()
+        val zone = ZoneId.systemDefault()
+        val rows = days.take(10).map { date ->
+            val label = when (date) {
+                today -> "Hoje, ${date.format(dayFormatter)}"
+                today.plusDays(1) -> "Amanhã, ${date.format(dayFormatter)}"
+                else -> date.atStartOfDay(zone).format(dayFormatter).replaceFirstChar { it.uppercaseChar() }
+            }
+            ListRow(id = "day:$date", title = label)
+        }
+
+        whatsAppGateway.sendList(
+            WhatsAppListMessage(
+                to = conversation.customerPhone,
+                body = "Ótimo! ${professional.name} tem disponibilidade nos seguintes dias:",
+                buttonText = "Ver dias disponíveis",
+                sections = listOf(ListSection(title = "Dias disponíveis", rows = rows))
+            )
+        )
+    }
+
+    // ── Day selected: show time slots for that day ────────────────────────────
+    private fun handleDaySelected(tenantId: TenantId, conversation: Conversation, dateStr: String) {
+        val date = runCatching { LocalDate.parse(dateStr) }.getOrNull()
+            ?: return sendMainMenu(conversation, "Data inválida. Vamos recomeçar.")
+
+        val pid = conversation.context.selectedProfessionalId
+            ?: return sendMainMenu(conversation, "Ops! Perdi os dados. Vamos recomeçar.")
+        val professionalName = conversation.context.selectedProfessionalName ?: "profissional"
+
+        val slots = availableSlotQueryPort.findSlotsForDay(tenantId, pid, date)
+
+        if (slots.isEmpty()) {
+            // Day became unavailable — re-show available days
+            val days = availableSlotQueryPort.findAvailableDays(tenantId, pid, daysAhead = 14)
+            if (days.isEmpty()) {
+                sendMainMenu(conversation, "Não há mais horários disponíveis. 😔")
+                return
+            }
+            val today = LocalDate.now()
+            val zone = ZoneId.systemDefault()
+            val rows = days.take(10).map { d ->
+                val label = when (d) {
+                    today -> "Hoje, ${d.format(dayFormatter)}"
+                    today.plusDays(1) -> "Amanhã, ${d.format(dayFormatter)}"
+                    else -> d.atStartOfDay(zone).format(dayFormatter).replaceFirstChar { it.uppercaseChar() }
+                }
+                ListRow(id = "day:$d", title = label)
+            }
+            whatsAppGateway.sendList(
+                WhatsAppListMessage(
+                    to = conversation.customerPhone,
+                    body = "Esse dia não tem mais horários. Escolha outro dia:",
+                    buttonText = "Ver dias disponíveis",
+                    sections = listOf(ListSection(title = "Dias disponíveis", rows = rows))
+                )
+            )
+            return
+        }
+
+        conversation.updateContext { it.copy(selectedDate = date) }
         conversation.transitionTo(ConversationState.SLOT_SELECTION)
         conversation.resetUnrecognized()
 
         val zone = ZoneId.systemDefault()
-        val buttons = slots.map { slot ->
-            val epochSeconds = slot.startAt.toEpochSecond()
-            val label = slot.startAt.withZoneSameInstant(zone).format(slotFormatter)
-                .replaceFirstChar { it.uppercaseChar() }
-            ButtonOption("slot:$epochSeconds", label)
+        val today = LocalDate.now()
+        val dayLabel = when (date) {
+            today -> "hoje"
+            today.plusDays(1) -> "amanhã"
+            else -> "em ${date.format(dayFormatter)}"
         }
 
-        whatsAppGateway.sendButtons(
-            WhatsAppButtonMessage(
+        val rows = slots.take(10).map { slot ->
+            ListRow(
+                id = "slot:${slot.startAt.toEpochSecond()}",
+                title = slot.startAt.withZoneSameInstant(zone).format(timeFormatter)
+            )
+        }
+
+        whatsAppGateway.sendList(
+            WhatsAppListMessage(
                 to = conversation.customerPhone,
-                body = "Ótimo! Aqui estão os horários disponíveis com ${professional.name}:",
-                buttons = buttons
+                body = "Horários disponíveis com $professionalName $dayLabel:",
+                buttonText = "Ver horários",
+                sections = listOf(ListSection(title = date.format(dayFormatter).replaceFirstChar { it.uppercaseChar() }, rows = rows))
             )
         )
     }
@@ -214,32 +290,48 @@ class ConversationOrchestrator(
                     body = "✅ Agendamento confirmado!\n\n👤 $professionalName\n📅 $dateLabel\n\nTe esperamos! Qualquer dúvida, é só chamar. 👊"
                 )
             )
-        } catch (e: IllegalArgumentException) {
-            log.warn("Booking conflict for phone={}: {}", conversation.customerPhone, e.message)
+        } catch (e: Exception) {
+            val isConflict = e is IllegalArgumentException && e.message?.contains("available", ignoreCase = true) == true
+            if (isConflict) {
+                log.warn("Booking conflict for phone={}: {}", conversation.customerPhone, e.message)
+            } else {
+                log.error("Booking failed for phone={}: {}", conversation.customerPhone, e.message, e)
+            }
             conversation.transitionTo(ConversationState.SLOT_SELECTION)
             val pid = professionalId
+            val errorBody = if (isConflict)
+                "Opa! Esse horário acabou de ser reservado. Vou buscar outros horários disponíveis..."
+            else
+                "Ocorreu um erro ao confirmar o agendamento. Vamos tentar outro horário."
             whatsAppGateway.sendText(
                 WhatsAppTextMessage(
                     to = conversation.customerPhone,
-                    body = "Opa! Esse horário acabou de ser reservado. Vou buscar outros horários disponíveis..."
+                    body = errorBody
                 )
             )
-            // Re-query slots
-            val slots = availableSlotQueryPort.findNextSlots(tenantId, pid, daysAhead = 7, limit = 3)
-            if (slots.isEmpty()) {
+            // Re-show available days
+            val days = availableSlotQueryPort.findAvailableDays(tenantId, pid, daysAhead = 14)
+            if (days.isEmpty()) {
                 sendMainMenu(conversation, "Não há mais horários disponíveis nos próximos dias. 😔")
                 return
             }
+            val today = LocalDate.now()
             val zone = ZoneId.systemDefault()
-            val buttons = slots.map { s ->
-                ButtonOption("slot:${s.startAt.toEpochSecond()}",
-                    s.startAt.withZoneSameInstant(zone).format(slotFormatter).replaceFirstChar { it.uppercaseChar() })
+            conversation.transitionTo(ConversationState.DAY_SELECTION)
+            val rows = days.take(10).map { d ->
+                val label = when (d) {
+                    today -> "Hoje, ${d.format(dayFormatter)}"
+                    today.plusDays(1) -> "Amanhã, ${d.format(dayFormatter)}"
+                    else -> d.atStartOfDay(zone).format(dayFormatter).replaceFirstChar { it.uppercaseChar() }
+                }
+                ListRow(id = "day:$d", title = label)
             }
-            whatsAppGateway.sendButtons(
-                WhatsAppButtonMessage(
+            whatsAppGateway.sendList(
+                WhatsAppListMessage(
                     to = conversation.customerPhone,
-                    body = "Escolha um dos horários disponíveis:",
-                    buttons = buttons
+                    body = "Escolha outro dia disponível:",
+                    buttonText = "Ver dias disponíveis",
+                    sections = listOf(ListSection(title = "Dias disponíveis", rows = rows))
                 )
             )
         }

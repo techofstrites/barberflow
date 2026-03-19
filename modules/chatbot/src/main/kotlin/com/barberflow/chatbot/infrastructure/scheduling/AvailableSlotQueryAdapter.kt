@@ -50,4 +50,40 @@ class AvailableSlotQueryAdapter(
 
         return result
     }
+
+    override fun findAvailableDays(
+        tenantId: TenantId,
+        professionalId: UUID,
+        daysAhead: Int,
+        durationMinutes: Int
+    ): List<LocalDate> {
+        val today = LocalDate.now()
+        val now = ZonedDateTime.now()
+        val days = mutableListOf<LocalDate>()
+
+        for (dayOffset in 0 until daysAhead) {
+            val date = today.plusDays(dayOffset.toLong())
+            val slots = getAvailableSlotsUseCase.execute(
+                GetAvailableSlotsQuery(tenantId, professionalId, date, durationMinutes)
+            )
+            val hasFutureSlot = slots.any { it.startAt.isAfter(now) }
+            if (hasFutureSlot) days.add(date)
+        }
+
+        return days
+    }
+
+    override fun findSlotsForDay(
+        tenantId: TenantId,
+        professionalId: UUID,
+        date: LocalDate,
+        durationMinutes: Int
+    ): List<AvailableSlotDto> {
+        val now = ZonedDateTime.now()
+        return getAvailableSlotsUseCase.execute(
+            GetAvailableSlotsQuery(tenantId, professionalId, date, durationMinutes)
+        )
+            .filter { it.startAt.isAfter(now) }
+            .map { AvailableSlotDto(professionalId, it.startAt, it.endAt) }
+    }
 }

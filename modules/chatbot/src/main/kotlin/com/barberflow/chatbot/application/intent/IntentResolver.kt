@@ -41,6 +41,7 @@ class IntentResolver(
         if (normalized.startsWith("another_time:")) return Intent.AnotherTime
         if (normalized.startsWith("service:")) return Intent.SelectService(normalized.removePrefix("service:"))
         if (normalized.startsWith("professional:")) return Intent.SelectProfessional(normalized.removePrefix("professional:"))
+        if (normalized.startsWith("day:")) return Intent.SelectDay(normalized.removePrefix("day:"))
         if (normalized.startsWith("slot:")) return Intent.SelectSlot(normalized.removePrefix("slot:"))
 
         // Layer 2: keyword matching

@@ -10,6 +10,7 @@ import com.barberflow.scheduling.domain.model.TimeSlot
 import com.barberflow.scheduling.domain.repository.AppointmentRepository
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
+import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 import java.util.UUID
@@ -21,7 +22,7 @@ class AppointmentBookingAdapter(
     private val eventPublisher: ApplicationEventPublisher
 ) : AppointmentBookingPort {
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     override fun book(request: BookingRequest): UUID {
         val customerId = customerResolverPort.findOrCreate(request.tenantId, request.customerPhone)
 
