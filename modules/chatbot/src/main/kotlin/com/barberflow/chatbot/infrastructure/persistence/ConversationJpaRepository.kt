@@ -8,4 +8,6 @@ interface ConversationJpaRepository : JpaRepository<ConversationEntity, UUID> {
         customerPhone: String,
         tenantId: UUID
     ): ConversationEntity?
+
+    fun deleteByCustomerPhone(customerPhone: String)
 }

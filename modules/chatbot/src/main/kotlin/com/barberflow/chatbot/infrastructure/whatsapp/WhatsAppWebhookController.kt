@@ -51,6 +51,7 @@ class WhatsAppWebhookController(
 
         payload.entry.forEach { entry ->
             entry.changes.forEach { change ->
+                val contactsByPhone = change.value.contacts.associateBy { it.waId }
                 change.value.messages.forEach { message ->
                     val body = when (message.type) {
                         "text" -> message.text?.body ?: return@forEach
@@ -63,8 +64,11 @@ class WhatsAppWebhookController(
                         }
                     }
 
+                    val contactName = contactsByPhone[message.from]?.profile?.name
+                        ?.takeIf { it.isNotBlank() }
+
                     try {
-                        orchestrator.handleIncomingMessage(tid, message.from, body)
+                        orchestrator.handleIncomingMessage(tid, message.from, body, contactName)
                     } catch (e: Exception) {
                         log.error("Error processing message from {}: {}", message.from, e.message, e)
                     }

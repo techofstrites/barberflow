@@ -12,13 +12,15 @@ class CustomerResolverAdapter(
     private val createCustomerUseCase: CreateCustomerUseCase
 ) : CustomerResolverPort {
 
-    override fun findOrCreate(tenantId: TenantId, phone: String): UUID =
-        createCustomerUseCase.execute(
+    override fun findOrCreate(tenantId: TenantId, phone: String, name: String?): UUID {
+        val normalizedPhone = if (phone.startsWith("+")) phone else "+$phone"
+        return createCustomerUseCase.execute(
             CreateCustomerCommand(
                 tenantId = tenantId,
-                phone = phone,
-                name = phone, // temporary name until customer provides it
+                phone = normalizedPhone,
+                name = name?.takeIf { it.isNotBlank() } ?: normalizedPhone,
                 consentGiven = true // implicit LGPD consent by initiating contact
             )
         )
+    }
 }

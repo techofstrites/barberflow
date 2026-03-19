@@ -3,6 +3,7 @@ package com.barberflow.chatbot.infrastructure.test
 import com.barberflow.chatbot.domain.port.ButtonOption
 import com.barberflow.chatbot.domain.port.ListRow
 import com.barberflow.chatbot.domain.port.ListSection
+import com.barberflow.chatbot.domain.repository.ConversationRepository
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.web.bind.annotation.*
 
@@ -25,17 +26,22 @@ data class OutboundMessageDto(
 @RestController
 @RequestMapping("/api/v1/whatsapp-test")
 @ConditionalOnProperty(name = ["whatsapp.test-mode"], havingValue = "true")
-class TestChatController(private val store: TestMessageStore) {
+class TestChatController(
+    private val store: TestMessageStore,
+    private val conversationRepository: ConversationRepository
+) {
 
     /** Poll pending bot messages for a phone number (clears them after reading). */
     @GetMapping("/messages")
     fun poll(@RequestParam phoneNumber: String): List<OutboundMessageDto> =
         store.poll(phoneNumber).map { it.toDto() }
 
-    /** Reset conversation state (clears pending messages). */
+    /** Reset conversation state and clear pending messages. */
     @DeleteMapping("/conversation")
-    fun clear(@RequestParam phoneNumber: String) =
+    fun clear(@RequestParam phoneNumber: String) {
         store.clearConversation(phoneNumber)
+        conversationRepository.deleteByPhone(phoneNumber)
+    }
 
     private fun StoredMessage.toDto() = when (this) {
         is StoredMessage.Text -> OutboundMessageDto(type = "text", body = body)

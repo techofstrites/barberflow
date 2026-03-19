@@ -5,6 +5,7 @@ import com.barberflow.chatbot.domain.repository.ConversationRepository
 import com.barberflow.core.tenant.TenantId
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.stereotype.Repository
+import org.springframework.transaction.annotation.Transactional
 
 @Repository
 class ConversationRepositoryImpl(
@@ -23,4 +24,9 @@ class ConversationRepositoryImpl(
 
     override fun findById(id: String): Conversation? =
         jpa.findById(java.util.UUID.fromString(id)).orElse(null)?.toDomain(mapper)
+
+    @Transactional
+    override fun deleteByPhone(phone: String) {
+        jpa.deleteByCustomerPhone(phone)
+    }
 }

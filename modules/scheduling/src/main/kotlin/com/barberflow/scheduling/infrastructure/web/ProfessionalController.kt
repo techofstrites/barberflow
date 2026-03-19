@@ -24,6 +24,7 @@ class ProfessionalEntity(
 @Repository
 interface ProfessionalJpaRepository : JpaRepository<ProfessionalEntity, UUID> {
     fun findAllByTenantIdAndActiveTrue(tenantId: UUID): List<ProfessionalEntity>
+    fun findAllByTenantId(tenantId: UUID): List<ProfessionalEntity>
 }
 
 data class CreateProfessionalRequest(

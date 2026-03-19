@@ -16,6 +16,10 @@ class IntentResolver(
     private val cancelKeywords = setOf(
         "cancelar", "desmarcar", "cancela", "não vou", "nao vou poder", "quero cancelar"
     )
+    private val historyKeywords = setOf(
+        "histórico", "historico", "meus agendamentos", "ver agendamentos",
+        "agendamentos", "quero ver", "minhas reservas"
+    )
     private val greetingKeywords = setOf(
         "oi", "olá", "ola", "bom dia", "boa tarde", "boa noite",
         "hey", "e aí", "e ai", "tudo bem", "oiee", "opa"
@@ -34,6 +38,7 @@ class IntentResolver(
         // Layer 1: exact button/list IDs — 100% deterministic
         if (normalized == "schedule") return Intent.ScheduleAppointment
         if (normalized == "cancel") return Intent.CancelAppointment
+        if (normalized == "history") return Intent.ViewHistory
         if (normalized == "human") return Intent.Unrecognized
 
         if (normalized.startsWith("confirm:")) return Intent.Confirm
@@ -43,10 +48,12 @@ class IntentResolver(
         if (normalized.startsWith("professional:")) return Intent.SelectProfessional(normalized.removePrefix("professional:"))
         if (normalized.startsWith("day:")) return Intent.SelectDay(normalized.removePrefix("day:"))
         if (normalized.startsWith("slot:")) return Intent.SelectSlot(normalized.removePrefix("slot:"))
+        if (normalized.startsWith("cancel_appt:")) return Intent.SelectCancelAppointment(normalized.removePrefix("cancel_appt:"))
 
         // Layer 2: keyword matching
         val keywordIntent = when (currentState) {
             ConversationState.AWAITING_CONFIRMATION -> resolveConfirmation(normalized)
+            ConversationState.AWAITING_CANCEL_CONFIRMATION -> resolveConfirmation(normalized)
             ConversationState.IDLE, ConversationState.GREETING -> resolveInitial(normalized)
             else -> resolveGeneral(normalized)
         }
@@ -68,6 +75,7 @@ class IntentResolver(
             greetingKeywords.any { message.contains(it) } -> Intent.Greeting
             scheduleKeywords.any { message.contains(it) } -> Intent.ScheduleAppointment
             cancelKeywords.any { message.contains(it) } -> Intent.CancelAppointment
+            historyKeywords.any { message.contains(it) } -> Intent.ViewHistory
             else -> Intent.Unrecognized
         }
 
@@ -75,6 +83,7 @@ class IntentResolver(
         when {
             scheduleKeywords.any { message.contains(it) } -> Intent.ScheduleAppointment
             cancelKeywords.any { message.contains(it) } -> Intent.CancelAppointment
+            historyKeywords.any { message.contains(it) } -> Intent.ViewHistory
             confirmKeywords.any { message.contains(it) } -> Intent.Confirm
             declineKeywords.any { message.contains(it) } -> Intent.Decline
             else -> Intent.Unrecognized

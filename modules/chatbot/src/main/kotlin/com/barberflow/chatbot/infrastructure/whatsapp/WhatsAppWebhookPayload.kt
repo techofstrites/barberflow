@@ -24,7 +24,19 @@ data class Change(
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Value(
     val messages: List<IncomingMessage> = emptyList(),
-    val metadata: Metadata = Metadata()
+    val metadata: Metadata = Metadata(),
+    val contacts: List<WhatsAppContact> = emptyList()
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class WhatsAppContact(
+    @JsonProperty("wa_id") val waId: String = "",
+    val profile: WhatsAppProfile = WhatsAppProfile()
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class WhatsAppProfile(
+    val name: String = ""
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)

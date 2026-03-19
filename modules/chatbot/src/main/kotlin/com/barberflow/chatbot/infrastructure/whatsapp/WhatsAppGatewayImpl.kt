@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
+import reactor.core.publisher.Mono
 
 @Component
 @ConditionalOnProperty(name = ["whatsapp.test-mode"], havingValue = "false", matchIfMissing = true)
@@ -74,7 +75,9 @@ class WhatsAppGatewayImpl(
                         mapOf(
                             "title" to section.title,
                             "rows" to section.rows.map { row ->
-                                mapOf("id" to row.id, "title" to row.title, "description" to (row.description ?: ""))
+                                val rowMap = mutableMapOf("id" to row.id, "title" to row.title)
+                                if (!row.description.isNullOrBlank()) rowMap["description"] = row.description
+                                rowMap
                             }
                         )
                     }
@@ -117,6 +120,11 @@ class WhatsAppGatewayImpl(
                 .header("Content-Type", "application/json")
                 .bodyValue(body)
                 .retrieve()
+                .onStatus({ it.is4xxClientError || it.is5xxServerError }) { response ->
+                    response.bodyToMono(String::class.java).map { errorBody ->
+                        RuntimeException("WhatsApp API ${response.statusCode()}: $errorBody")
+                    }
+                }
                 .toBodilessEntity()
                 .block()
         } catch (e: Exception) {

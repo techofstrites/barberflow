@@ -1,5 +1,8 @@
 package com.barberflow.scheduling.infrastructure.web
 
+import com.barberflow.core.tenant.TenantId
+import com.barberflow.scheduling.application.query.GetAvailableSlotsQuery
+import com.barberflow.scheduling.application.query.GetAvailableSlotsUseCase
 import com.barberflow.scheduling.infrastructure.persistence.ScheduleEntity
 import com.barberflow.scheduling.infrastructure.persistence.ScheduleJpaRepository
 import com.barberflow.scheduling.infrastructure.persistence.WorkingHoursEntity
@@ -10,6 +13,7 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.server.ResponseStatusException
 import java.time.DayOfWeek
 import java.time.LocalTime
+import java.time.ZonedDateTime
 import java.util.UUID
 
 data class WorkingHoursRequest(
@@ -35,7 +39,31 @@ data class ScheduleResponse(
 
 @RestController
 @RequestMapping("/api/v1/professionals/{professionalId}/schedule")
-class ScheduleController(private val jpa: ScheduleJpaRepository) {
+class ScheduleController(
+    private val jpa: ScheduleJpaRepository,
+    private val getAvailableSlotsUseCase: GetAvailableSlotsUseCase
+) {
+
+    @GetMapping("/available-slots")
+    fun getAvailableSlots(
+        @PathVariable professionalId: UUID,
+        @RequestHeader("X-Tenant-Id") tenantId: String,
+        @RequestParam date: String,
+        @RequestParam(defaultValue = "30") durationMinutes: Int
+    ): List<String> {
+        val localDate = java.time.LocalDate.parse(date)
+        val tid = TenantId.from(tenantId)
+        val now = ZonedDateTime.now()
+        return getAvailableSlotsUseCase.execute(
+            GetAvailableSlotsQuery(
+                tenantId = tid,
+                professionalId = professionalId,
+                date = localDate,
+                serviceDurationMinutes = durationMinutes
+            )
+        ).filter { it.startAt.isAfter(now) }
+         .map { it.startAt.toOffsetDateTime().toString() }
+    }
 
     @GetMapping
     fun get(
