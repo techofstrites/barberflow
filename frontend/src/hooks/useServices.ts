@@ -20,3 +20,20 @@ export function useCreateService() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["services"] }),
   });
 }
+
+export function useUpdateService() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ serviceId, ...data }: { serviceId: string; name: string; price: number; durationMinutes: number }) =>
+      api.put(`/api/v1/services/${serviceId}`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["services"] }),
+  });
+}
+
+export function useDeleteService() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (serviceId: string) => api.delete(`/api/v1/services/${serviceId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["services"] }),
+  });
+}

@@ -5,5 +5,6 @@ import java.util.UUID
 
 interface TenantJpaRepository : JpaRepository<TenantEntity, UUID> {
     fun findBySlug(slug: String): TenantEntity?
+    fun findByWhatsappPhoneNumberId(phoneNumberId: String): TenantEntity?
     fun existsBySlug(slug: String): Boolean
 }

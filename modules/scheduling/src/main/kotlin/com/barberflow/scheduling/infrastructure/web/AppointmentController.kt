@@ -34,6 +34,7 @@ class AppointmentController(
     private val scheduleUseCase: ScheduleAppointmentUseCase,
     private val cancelUseCase: CancelAppointmentUseCase,
     private val completeUseCase: CompleteAppointmentUseCase,
+    private val confirmUseCase: ConfirmAppointmentUseCase,
     private val appointmentRepository: AppointmentRepository
 ) {
     @GetMapping
@@ -91,6 +92,15 @@ class AppointmentController(
                 reason = request?.reason
             )
         )
+    }
+
+    @PostMapping("/{id}/confirm")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun confirm(
+        @PathVariable id: UUID,
+        @RequestHeader("X-Tenant-Id") tenantId: String
+    ) {
+        confirmUseCase.execute(ConfirmAppointmentCommand(id, TenantId.from(tenantId)))
     }
 
     @PostMapping("/{id}/complete")

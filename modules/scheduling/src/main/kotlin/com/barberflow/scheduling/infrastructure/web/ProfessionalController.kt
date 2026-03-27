@@ -24,9 +24,15 @@ class ProfessionalEntity(
 @Repository
 interface ProfessionalJpaRepository : JpaRepository<ProfessionalEntity, UUID> {
     fun findAllByTenantIdAndActiveTrue(tenantId: UUID): List<ProfessionalEntity>
+    fun findAllByTenantId(tenantId: UUID): List<ProfessionalEntity>
 }
 
 data class CreateProfessionalRequest(
+    @field:NotBlank val name: String,
+    val specialties: List<String> = emptyList()
+)
+
+data class UpdateProfessionalRequest(
     @field:NotBlank val name: String,
     val specialties: List<String> = emptyList()
 )
@@ -61,5 +67,25 @@ class ProfessionalController(private val jpa: ProfessionalJpaRepository) {
             )
         )
         return ProfessionalResponse(entity.id, entity.name, entity.specialties.toList(), entity.active)
+    }
+
+    @PutMapping("/{id}")
+    fun update(
+        @PathVariable id: UUID,
+        @Valid @RequestBody req: UpdateProfessionalRequest,
+        @RequestHeader("X-Tenant-Id") tenantId: String
+    ): ProfessionalResponse {
+        val existing = jpa.findById(id).orElseThrow { NoSuchElementException("Professional not found") }
+        val updated = jpa.save(
+            ProfessionalEntity(
+                id = existing.id,
+                tenantId = existing.tenantId,
+                name = req.name,
+                specialties = req.specialties.toTypedArray(),
+                active = existing.active,
+                createdAt = existing.createdAt
+            )
+        )
+        return ProfessionalResponse(updated.id, updated.name, updated.specialties.toList(), updated.active)
     }
 }

@@ -7,4 +7,5 @@ interface ConversationRepository {
     fun save(conversation: Conversation): Conversation
     fun findActiveByPhone(phone: String, tenantId: TenantId): Conversation?
     fun findById(id: String): Conversation?
+    fun deleteByPhone(phone: String)
 }

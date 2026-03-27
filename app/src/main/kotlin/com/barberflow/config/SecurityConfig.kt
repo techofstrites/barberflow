@@ -36,7 +36,8 @@ class SecurityConfig(
                     "/api/v1/tenants",
                     "/api/v1/auth/**",
                     "/actuator/health",
-                    "/api/v1/webhooks/**"
+                    "/api/v1/webhooks/**",
+                    "/api/v1/whatsapp-test/**"
                 ).permitAll()
                 it.anyRequest().authenticated()
             }

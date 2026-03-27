@@ -4,10 +4,13 @@ import com.barberflow.chatbot.domain.port.*
 import com.fasterxml.jackson.annotation.JsonProperty
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
+import reactor.core.publisher.Mono
 
 @Component
+@ConditionalOnProperty(name = ["whatsapp.test-mode"], havingValue = "false", matchIfMissing = true)
 class WhatsAppGatewayImpl(
     @Value("\${whatsapp.api.base-url:https://graph.facebook.com/v19.0}") private val baseUrl: String,
     @Value("\${whatsapp.api.token:}") private val accessToken: String,
@@ -55,7 +58,8 @@ class WhatsAppGatewayImpl(
 
     override fun sendList(message: WhatsAppListMessage) {
         if (accessToken.isBlank()) {
-            log.info("[WhatsApp STUB] List to {}: {}", message.to, message.body)
+            val items = message.sections.flatMap { it.rows }.joinToString(" | ") { "[${it.id}] ${it.title}" }
+            log.info("[WhatsApp STUB] List to {}: {} | Items: {}", message.to, message.body, items)
             return
         }
         val body = mapOf(
@@ -71,7 +75,9 @@ class WhatsAppGatewayImpl(
                         mapOf(
                             "title" to section.title,
                             "rows" to section.rows.map { row ->
-                                mapOf("id" to row.id, "title" to row.title, "description" to (row.description ?: ""))
+                                val rowMap = mutableMapOf("id" to row.id, "title" to row.title)
+                                if (!row.description.isNullOrBlank()) rowMap["description"] = row.description
+                                rowMap
                             }
                         )
                     }
@@ -114,6 +120,11 @@ class WhatsAppGatewayImpl(
                 .header("Content-Type", "application/json")
                 .bodyValue(body)
                 .retrieve()
+                .onStatus({ it.is4xxClientError || it.is5xxServerError }) { response ->
+                    response.bodyToMono(String::class.java).map { errorBody ->
+                        RuntimeException("WhatsApp API ${response.statusCode()}: $errorBody")
+                    }
+                }
                 .toBodilessEntity()
                 .block()
         } catch (e: Exception) {

@@ -89,11 +89,11 @@ curl -X POST http://localhost:8080/api/v1/webhooks/whatsapp \
       "changes": [{
         "value": {
           "messages": [{
-            "from": "5511999990001",
+            "from": "5511980635589",
             "type": "text",
             "text": { "body": "oi" }
           }],
-          "metadata": { "phone_number_id": "SEU_TENANT_ID" }
+          "metadata": { "phone_number_id": "c5fb74b3-ea63-40c6-be4d-985ffc4d33b5" }
         }
       }]
     }]

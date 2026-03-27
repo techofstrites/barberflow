@@ -27,4 +27,7 @@ class CustomerRepositoryImpl(
 
     override fun findAll(tenantId: TenantId): List<Customer> =
         jpa.findAllByTenantId(tenantId.value).map { it.toDomain() }
+
+    override fun delete(id: UUID, tenantId: TenantId) =
+        jpa.deleteByIdAndTenantId(id, tenantId.value)
 }

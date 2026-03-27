@@ -20,3 +20,20 @@ export function useCreateCustomer() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["customers"] }),
   });
 }
+
+export function useUpdateCustomer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: string; name: string; consentGiven: boolean }) =>
+      api.put(`/api/v1/customers/${id}`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["customers"] }),
+  });
+}
+
+export function useDeleteCustomer() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/api/v1/customers/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["customers"] }),
+  });
+}
